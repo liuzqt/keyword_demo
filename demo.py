@@ -5,7 +5,7 @@
 @author: ZiqiLiu
 
 
-@file: predict.py
+@file: demo.py
 
 @time: 2017/6/14 下午5:04
 
@@ -13,11 +13,11 @@
 '''
 import tensorflow as tf
 from config.config import get_config
-import argparse
 from utils.common import path_join
 from utils.prediction import moving_average, decode, predict
 from process_wav import process_wave
 import numpy as np
+from fetch_wave import  fetch
 
 
 # load graph
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     runner = Runner(config)
 
-    spec, _ = process_wave('./azure_560086_你好乐乐.wav')
+    spec, _ = process_wave(fetch(device_id)) # TODO
     result = runner.predict(spec)
 
     print(result)
