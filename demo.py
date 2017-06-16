@@ -40,17 +40,11 @@ class Runner():
     def predict(self, inputX):
         seqLen = np.asarray([len(inputX)])
         with self.sess as sess, self.graph.as_default():
-            # variable_names = [n.name for n in
-            #                   sess.graph.as_graph_def().node]
-            # for n in variable_names:
-            #     print(n)
+
             prob = sess.run(['model/softmax:0'],
                             feed_dict={'model/inputX:0': inputX,
                                        'model/seqLength:0': seqLen})
-            np.set_printoptions(precision=4, threshold=np.inf,
-                                suppress=True)
-            with open('logits.txt', 'w') as f:
-                f.write(str(prob))
+
             moving_avg = moving_average(prob[0], self.config.smoothing_window,
                                         padding=True)
 
