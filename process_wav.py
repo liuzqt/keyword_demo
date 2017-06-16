@@ -349,54 +349,50 @@ def shuffle(pkl_path):
     batch = 4096
     with open(pkl_path, 'rb') as f:
         wave_list = pickle.load(f)
-    total = 0
-    for r in wave_list[18 * batch:19 * batch]:
-        if len(r[1]) > 0:
-            total += 1
-    print(total)
-    # for i in range(len(wave_list) // batch):
-    #     print('batch', i)
-    #
-    #     temp = wave_list[i * batch:(i + 1) * batch]
-    #     # flag = False
-    #     # for k in temp:
-    #     #     if len(k[1]) > 0:
-    #     #         flag = True
-    #     #         break
-    #     # if not flag:
-    #     #     print('fuck', i)
-    #
-    #     ok = False
-    #     again = 0
-    #
-    #     while not ok and again < 100:
-    #         count = 0
-    #         random.shuffle(temp)
-    #         # print(temp[32:64])
-    #         c = 0
-    #         for j in range(batch // 32):
-    #             subok = False
-    #             small_batch = temp[j * 32:(j + 1) * 32]
-    #             for record in small_batch:
-    #                 if len(record[1]) > 0:
-    #                     subok = True
-    #                     break
-    #             if subok:
-    #                 c += 1
-    #                 continue
-    #             else:
-    #                 print(i, 'again')
-    #                 again += 1
-    #                 break
-    #
-    #         if c == batch // 32:
-    #             ok = True
-    #     new_list.extend(temp)
-    # print(len(wave_list))
-    # new_list.extend(wave_list[len(wave_list) // batch * batch:])
-    # print(len(new_list))
-    # with open(pkl_path + '.shuffled', "wb") as f:
-    #     pickle.dump(new_list, f)
+
+    for i in range(len(wave_list) // batch):
+        print('batch', i)
+
+        temp = wave_list[i * batch:(i + 1) * batch]
+        # flag = False
+        # for k in temp:
+        #     if len(k[1]) > 0:
+        #         flag = True
+        #         break
+        # if not flag:
+        #     print('fuck', i)
+
+        ok = False
+        again = 0
+
+        while not ok and again < 100:
+            count = 0
+            random.shuffle(temp)
+            # print(temp[32:64])
+            c = 0
+            for j in range(batch // 32):
+                subok = False
+                small_batch = temp[j * 32:(j + 1) * 32]
+                for record in small_batch:
+                    if len(record[1]) > 0:
+                        subok = True
+                        break
+                if subok:
+                    c += 1
+                    continue
+                else:
+                    print(i, 'again')
+                    again += 1
+                    break
+
+            if c == batch // 32:
+                ok = True
+        new_list.extend(temp)
+    print(len(wave_list))
+    new_list.extend(wave_list[len(wave_list) // batch * batch:])
+    print(len(new_list))
+    with open(pkl_path + '.shuffled', "wb") as f:
+        pickle.dump(new_list, f)
 
 
 if __name__ == '__main__':
