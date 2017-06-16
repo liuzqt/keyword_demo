@@ -17,7 +17,7 @@ from utils.common import path_join
 from utils.prediction import moving_average, decode, predict
 from process_wav import process_wave
 import numpy as np
-from fetch_wave import  fetch
+from fetch_wave import fetch
 
 
 # load graph
@@ -58,15 +58,15 @@ class Runner():
                                  self.config.lockout)
             result = decode(prediction, self.config.word_interval,
                             self.config.golden)
-        return result
+        return True if result == 1 else False
 
 
 if __name__ == '__main__':
     config = get_config()
 
     runner = Runner(config)
-
-    spec, _ = process_wave(fetch(device_id)) # TODO
+    wave, label = fetch(device_id)  # TODO
+    spec, _ = process_wave(label)
     result = runner.predict(spec)
 
-    print(result)
+    print(result, label)

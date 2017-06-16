@@ -27,4 +27,4 @@ def fetch(id=device_id):
     download_url = base_url + 'audio?key=' + record['awskey']
     # label = record['???'] TODO
     # wave = download() TODO
-    return wave
+    return wave,label
