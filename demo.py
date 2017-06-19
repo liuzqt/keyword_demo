@@ -11,17 +11,28 @@
 
 @desc:
 '''
+import os
+import asyncio
+from io import BytesIO
+
+import tornado
+import tornado.web
+from tornado.platform.asyncio import AsyncIOMainLoop
+import numpy as np
 import tensorflow as tf
 from config.config import get_config
 from utils.common import path_join
 from utils.prediction import moving_average, decode, predict
 from process_wav import process_wave
-import numpy as np
 from fetch_wave import fetch
-from io import  BytesIO
 
 # load graph
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 class Runner():
+
     def __init__(self, config):
         self.graph_def = tf.GraphDef()
         self.config = config
@@ -58,11 +69,11 @@ class Runner():
         return True if result == 1 else False
 
 
-def run(device_id='32EFEA3263D079E1BE3767C87FC0A1C2',current=False):
+def run(device_id='32EFEA3263D079E1BE3767C87FC0A1C2', current=False):
     config = get_config()
 
     runner = Runner(config)
-    label=""
+    label = ""
     if not current:
         wave, label = fetch(device_id)
         print('wave', wave)
@@ -71,5 +82,43 @@ def run(device_id='32EFEA3263D079E1BE3767C87FC0A1C2',current=False):
 
     print(result, label)
 
+
+class HotWordHandler(tornado.web.RequestHandler):
+
+    def initialize(self, runner):
+        self.runner = runner
+
+    def get(self):
+        device_id = self.get_argument('device_id')
+        wave, label = fetch(device_id)
+        print('wave', wave)
+        spec, _ = process_wave('temp.wav')
+        result = self.runner.predict(spec)
+        self.write({
+            'result': result,
+            'label': label,
+        })
+
+
+def start_server():
+    config = get_config()
+
+    runner = Runner(config)
+    AsyncIOMainLoop().install()
+    app = tornado.web.Application([
+        (r'/()', tornado.web.StaticFileHandler, {
+            'path': BASE_DIR,
+            'default_filename': 'index.html'
+        }),
+        (r'/api/hotword', HotWordHandler, {'runner': runner}),
+    ], debug=True
+    )
+    app.listen(8080)
+    print('start server')
+    loop = asyncio.get_event_loop()
+    loop.run_forever()
+
+
 if __name__ == '__main__':
-    run('32EFEA3263D079E1BE3767C87FC0A1C2')
+    start_server()
+    # run('32EFEA3263D079E1BE3767C87FC0A1C2')

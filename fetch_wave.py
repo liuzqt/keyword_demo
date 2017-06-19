@@ -29,7 +29,6 @@ def fetch(id):
     print(download_url)
     wave = requests.get(download_url).content
     path = "./temp.wav"
-    with open(path,'wb') as f:
+    with open(path, 'wb') as f:
         f.write(wave)
     return path, label
-
