@@ -18,7 +18,7 @@ from utils.prediction import moving_average, decode, predict
 from process_wav import process_wave
 import numpy as np
 from fetch_wave import fetch
-
+from io import  BytesIO
 
 # load graph
 class Runner():
@@ -43,7 +43,11 @@ class Runner():
             prob = sess.run(['model/softmax:0'],
                             feed_dict={'model/inputX:0': inputX,
                                        'model/seqLength:0': seqLen})
-
+            np.set_printoptions(precision=4, threshold=np.inf,
+                                suppress=True)
+            # print(prob)
+            with open('logits.txt', 'w') as f:
+                f.write(str(prob))
             moving_avg = moving_average(prob[0], self.config.smoothing_window,
                                         padding=True)
 
@@ -66,4 +70,4 @@ def run(device_id='8FB56F7E4981B8D13D279C3C9BE5DEC5'):
     print(result, label)
 
 
-run()
+run('583A019427F20F469A94BB8EFBB2C4BB')

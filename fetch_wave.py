@@ -18,8 +18,8 @@ device_id = '8FB56F7E4981B8D13D279C3C9BE5DEC5'
 base_url = 'http://speechreview.in.naturali.io/prod/'
 
 
-def fetch(id=device_id):
-    r = requests.get(base_url + 'get?limit=50&offset=0&deviceid=' + device_id)
+def fetch(id):
+    r = requests.get(base_url + 'get?limit=50&offset=0&deviceid=' + id)
     a = r.content
     j = json.loads(a.decode())
 
@@ -28,6 +28,8 @@ def fetch(id=device_id):
     label = record['nires']
     print(download_url)
     wave = requests.get(download_url).content
-    print(wave)
-    return wave, label
+    path = "./temp.wav"
+    with open(path,'wb') as f:
+        f.write(wave)
+    return path, label
 
