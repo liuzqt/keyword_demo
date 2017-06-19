@@ -24,7 +24,10 @@ def fetch(id=device_id):
     j = json.loads(a.decode())
 
     record = j['Detail'][0]
-    download_url = base_url + 'audio?key=' + record['awskey']
-    # label = record['???'] TODO
-    # wave = download() TODO
-    return wave,label
+    download_url = base_url + 'audio/' + record['awskey']
+    label = record['nires']
+    print(download_url)
+    wave = requests.get(download_url).content
+    print(wave)
+    return wave, label
+

@@ -40,7 +40,6 @@ class Runner():
     def predict(self, inputX):
         seqLen = np.asarray([len(inputX)])
         with self.sess as sess, self.graph.as_default():
-
             prob = sess.run(['model/softmax:0'],
                             feed_dict={'model/inputX:0': inputX,
                                        'model/seqLength:0': seqLen})
@@ -55,12 +54,16 @@ class Runner():
         return True if result == 1 else False
 
 
-if __name__ == '__main__':
+def run(device_id='8FB56F7E4981B8D13D279C3C9BE5DEC5'):
     config = get_config()
 
     runner = Runner(config)
-    wave, label = fetch(device_id)  # TODO
-    spec, _ = process_wave(label)
+    wave, label = fetch(device_id)
+    print('wave', wave)
+    spec, _ = process_wave(wave)
     result = runner.predict(spec)
 
     print(result, label)
+
+
+run()
