@@ -50,22 +50,22 @@ class Runner():
 
     def predict(self, inputX):
         seqLen = np.asarray([len(inputX)])
-        with self.sess as sess, self.graph.as_default():
-            prob = sess.run(['model/softmax:0'],
-                            feed_dict={'model/inputX:0': inputX,
-                                       'model/seqLength:0': seqLen})
-            np.set_printoptions(precision=4, threshold=np.inf,
-                                suppress=True)
-            # print(prob)
-            with open('logits.txt', 'w') as f:
-                f.write(str(prob))
-            moving_avg = moving_average(prob[0], self.config.smoothing_window,
-                                        padding=True)
+        # with self.sess as sess, self.graph.as_default():
+        prob = self.sess.run(['model/softmax:0'],
+                             feed_dict={'model/inputX:0': inputX,
+                                        'model/seqLength:0': seqLen})
+        np.set_printoptions(precision=4, threshold=np.inf,
+                            suppress=True)
+        # print(prob)
+        with open('logits.txt', 'w') as f:
+            f.write(str(prob))
+        moving_avg = moving_average(prob[0], self.config.smoothing_window,
+                                    padding=True)
 
-            prediction = predict(moving_avg, self.config.trigger_threshold,
-                                 self.config.lockout)
-            result = decode(prediction, self.config.word_interval,
-                            self.config.golden)
+        prediction = predict(moving_avg, self.config.trigger_threshold,
+                             self.config.lockout)
+        result = decode(prediction, self.config.word_interval,
+                        self.config.golden)
         return True if result == 1 else False
 
 
