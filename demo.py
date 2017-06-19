@@ -58,16 +58,18 @@ class Runner():
         return True if result == 1 else False
 
 
-def run(device_id='8FB56F7E4981B8D13D279C3C9BE5DEC5'):
+def run(device_id='32EFEA3263D079E1BE3767C87FC0A1C2',current=False):
     config = get_config()
 
     runner = Runner(config)
-    wave, label = fetch(device_id)
-    print('wave', wave)
-    spec, _ = process_wave(wave)
+    label=""
+    if not current:
+        wave, label = fetch(device_id)
+        print('wave', wave)
+    spec, _ = process_wave('temp.wav')
     result = runner.predict(spec)
 
     print(result, label)
 
-
-run('583A019427F20F469A94BB8EFBB2C4BB')
+if __name__ == '__main__':
+    run('32EFEA3263D079E1BE3767C87FC0A1C2')
