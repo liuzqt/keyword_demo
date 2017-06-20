@@ -13,8 +13,8 @@
 '''
 import os
 import asyncio
-from io import BytesIO
 
+import time
 import tornado
 import tornado.web
 from tornado.platform.asyncio import AsyncIOMainLoop
@@ -32,7 +32,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class Runner():
-
     def __init__(self, config):
         self.graph_def = tf.GraphDef()
         self.config = config
@@ -84,7 +83,6 @@ def run(device_id='32EFEA3263D079E1BE3767C87FC0A1C2', current=False):
 
 
 class HotWordHandler(tornado.web.RequestHandler):
-
     def initialize(self, runner):
         self.runner = runner
 
@@ -97,6 +95,9 @@ class HotWordHandler(tornado.web.RequestHandler):
         self.write({
             'result': result,
             'label': label,
+            'time': time.strftime('%Y-%m-%d %A %X %Z',
+                                  time.localtime(time.time())),
+            'wave_file': wave
         })
 
 
