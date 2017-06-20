@@ -31,4 +31,4 @@ def fetch(id):
     path = "./temp.wav"
     with open(path, 'wb') as f:
         f.write(wave)
-    return path, label
+    return path, label, record['awskey']

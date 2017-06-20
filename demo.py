@@ -88,7 +88,7 @@ class HotWordHandler(tornado.web.RequestHandler):
 
     def get(self):
         device_id = self.get_argument('device_id')
-        wave, label = fetch(device_id)
+        wave, label, wave_id = fetch(device_id)
         print('wave', wave)
         spec, _ = process_wave('temp.wav')
         result = self.runner.predict(spec)
@@ -97,7 +97,7 @@ class HotWordHandler(tornado.web.RequestHandler):
             'label': label,
             'time': time.strftime('%Y-%m-%d %A %X %Z',
                                   time.localtime(time.time())),
-            'wave_file': wave
+            'wave_id': wave_id
         })
 
 
