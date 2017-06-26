@@ -25,7 +25,7 @@ from utils.common import path_join
 from utils.prediction import moving_average, decode, predict
 from process_wav import process_wave
 from fetch_wave import fetch
-
+from normalize import main
 # load graph
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -90,7 +90,8 @@ class HotWordHandler(tornado.web.RequestHandler):
         device_id = self.get_argument('device_id')
         wave, label, wave_id = fetch(device_id)
         print('wave', wave)
-        spec, _ = process_wave('temp.wav')
+        main()
+        spec, _ = process_wave('normalized-temp.wav')
         result = self.runner.predict(spec)
         self.write({
             'result': result,
@@ -122,4 +123,4 @@ def start_server():
 
 if __name__ == '__main__':
     start_server()
-    # run('32EFEA3263D079E1BE3767C87FC0A1C2')
+    # run('32EFEA3263D079E1BE3767C87FC0A1C2', True)

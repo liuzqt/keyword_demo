@@ -70,7 +70,7 @@ class Config(object):
         self.trigger_threshold = 0.6  # between (0,1), but this param is somehow arbitrary
 
         # these three sizes are frames, which depend on STFT frame size
-        self.smoothing_window = 9
+        self.smoothing_window = 11
         self.latency = 30
         self.word_interval = 70
         self.lockout = 50
