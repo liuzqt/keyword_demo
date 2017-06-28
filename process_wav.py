@@ -98,7 +98,7 @@ def process_wave(f):
         mel_spectrogram = np.transpose(
             librosa.feature.melspectrogram(y, sr=sr, n_fft=config.fft_size,
                                            hop_length=config.step_size,
-                                           power=2.,
+                                           power=config.power,
                                            fmin=300,
                                            fmax=8000,
                                            n_mels=config.num_features))

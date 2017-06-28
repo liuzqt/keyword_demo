@@ -209,7 +209,7 @@ class InputFile(object):
         else:
             raise ValueError("could not get max volume for " + self.input_file)
 
-        hist = re.findall(r"(histogram_([\d])+db: ([\-\d\.]+))", output)
+        hist = re.findall(r"(histogram_([\d]+)db: ([\-\d\.]+))", output)
         self.hist = [(float(i[1]), float(i[2])) for i in hist]
         self.hist = sorted(self.hist, key=lambda a: a[0])
 
