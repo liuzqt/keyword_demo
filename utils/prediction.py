@@ -15,6 +15,17 @@
 import numpy as np
 
 
+def ctc_predict(seq):
+    text = ''
+    for i in seq:
+        if i < 0:
+            break
+        if i > 0:
+            text += str(i)
+    return 1 if '123' in text else 0
+    # return 1 if '1233' in text else 0
+
+
 def predict(moving_avg, threshold, lockout, f=None):
     if f is not None:
         print(f)
@@ -96,8 +107,8 @@ def decode(prediction, word_interval, golden):
 
 def evaluate(result, target):
     assert len(result) == len(target)
-    print(target)
-    print(result)
+    # print(target)
+    # print(result)
     xor = [a ^ b for a, b in zip(target, result)]
     miss = sum([a & b for a, b in zip(xor, target)])
     false_accept = sum([a & b for a, b in zip(xor, result)])

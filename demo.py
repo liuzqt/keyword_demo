@@ -18,17 +18,34 @@ import time
 import tornado
 import tornado.web
 from tornado.platform.asyncio import AsyncIOMainLoop
+from positional_encoding import positional_encoding_op
 import numpy as np
 import tensorflow as tf
-from config.config import get_config
+# from config.config import get_config
+from config.ctc_config import get_config
 from utils.common import path_join
-from utils.prediction import moving_average, decode, predict
-from process_wav import process_wave
+from utils.prediction import moving_average, decode, predict, ctc_predict
 from fetch_wave import fetch
 from normalize import main
-# load graph
+import librosa
 
+# load graph
+config = get_config()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def process_wave(f):
+    y, sr = librosa.load(f, sr=config.samplerate)
+
+    mel_spectrogram = np.transpose(
+        librosa.feature.melspectrogram(y, sr=sr, n_fft=config.fft_size,
+                                       hop_length=config.step_size,
+                                       power=config.power,
+                                       fmin=300,
+                                       fmax=8000,
+                                       n_mels=60))
+
+    return mel_spectrogram, y
 
 
 class Runner():
@@ -67,6 +84,18 @@ class Runner():
                         self.config.golden)
         return True if result == 1 else False
 
+    def predict_ctc(self, inputX):
+        seqLen = np.asarray([len(inputX)])
+        # with self.sess as sess, self.graph.as_default():
+        output = self.sess.run(['model/dense_output:0'],
+                               feed_dict={'model/inputX:0': inputX,
+                                          'model/seqLength:0': seqLen})
+        np.set_printoptions(precision=4, threshold=np.inf,
+                            suppress=True)
+        # print(prob)
+        result = ctc_predict(output[0])
+        return True if result == 1 else False
+
 
 def run(device_id='32EFEA3263D079E1BE3767C87FC0A1C2', current=False):
     config = get_config()
@@ -92,7 +121,7 @@ class HotWordHandler(tornado.web.RequestHandler):
         print('wave', wave)
         main()
         spec, _ = process_wave('normalized-temp.wav')
-        result = self.runner.predict(spec)
+        result = self.runner.predict_ctc(spec)
         self.write({
             'result': result,
             'label': label,
@@ -103,8 +132,6 @@ class HotWordHandler(tornado.web.RequestHandler):
 
 
 def start_server():
-    config = get_config()
-
     runner = Runner(config)
     AsyncIOMainLoop().install()
     app = tornado.web.Application([
