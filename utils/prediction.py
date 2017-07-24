@@ -15,36 +15,87 @@
 import numpy as np
 
 
-def ctc_predict(seq):
+def ctc_decode(softmax, classnum, lockout=4, thres=0.5, loose_thres=0.2):
+    np.set_printoptions(precision=4, threshold=np.inf,
+                        suppress=True)
+    softmax = softmax[:, 1:classnum - 1]
+    i = 0
+
+    result = []
+    length = softmax.shape[0]
+    loose = False
+
+    while (i < length):
+        if loose:
+            if (softmax[i, :].max() < loose_thres):
+                if result[-1][0] != 3:
+                    i += lockout
+                    loose = False
+                    continue
+            else:
+                if softmax[i, 2] > loose_thres:
+                    result.append((3, i))
+                    i += lockout
+                    loose = False
+                    continue
+                else:
+                    pos = softmax[i, :].argmax() + 1
+                    if softmax[i, pos - 1] > 0.6:
+                        if result[-1][1] + lockout < i:
+                            result.append((pos, i))
+
+        else:
+            if (softmax[i, :].max() > thres):
+                result.append((softmax[i, :].argmax() + 1, i))
+                i += lockout
+                if len(result) >= 3:
+                    temp = [i[0] for i in result[-3:]]
+                    if temp == [1, 2, 3]:
+                        loose = True
+                continue
+        i += 1
+
+    new_result = [0]
+    for i in result:
+        new_result.append(i[0])
+        new_result.append(0)
+    return np.asarray(new_result, dtype=np.int32)
+
+
+def ctc_decode_strict(softmax, classnum, lockout=4, thres=0.5):
+    np.set_printoptions(precision=4, threshold=np.inf,
+                        suppress=True, )
+    softmax = softmax[:, 1:classnum - 1]
+    i = 0
+    result = []
+    length = softmax.shape[0]
+
+    while (i < length):
+
+        if (softmax[i, :].max() > thres):
+            result.append((softmax[i, :].argmax() + 1, i))
+            i += lockout
+            continue
+        i += 1
+    new_result = [0]
+    for i in result:
+        new_result.append(i[0])
+        new_result.append(0)
+    return np.asarray(new_result, dtype=np.int32)
+
+
+def ctc_predict(seq, labels):
     text = ''
     for i in seq:
         if i < 0:
             break
         if i > 0:
             text += str(i)
-    return 1 if '123' in text else 0
+    for l in labels:
+        if l in text:
+            return 1
+    return 0
     # return 1 if '1233' in text else 0
-
-
-def predict(moving_avg, threshold, lockout, f=None):
-    if f is not None:
-        print(f)
-    # array is 2D array, moving avg for one record, whose shape is (t,p)
-    # label is one-hot, which is also the same size of moving_avg
-    # we assume label[0] is background
-    # return a trigger array, the same size (t,p) (it's sth like mask)
-    # print('=' * 50)
-    num_class = moving_avg.shape[1]
-    len_frame = moving_avg.shape[0]
-    # print(num_class, len_frame)
-    prediction = np.zeros(moving_avg.shape, dtype=np.float32)
-    for i in range(1, num_class):
-        j = 0
-        while j < len_frame:
-            if moving_avg[j][i] > threshold:
-                prediction[j][i] = 1
-            j += 1
-    return prediction
 
 
 def decode(prediction, word_interval, golden):

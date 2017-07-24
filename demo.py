@@ -13,7 +13,12 @@
 '''
 import os
 import asyncio
+import matplotlib.pyplot as plt
+import matplotlib
+import argparse
 
+matplotlib.use('Agg')
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 import time
 import tornado
 import tornado.web
@@ -24,18 +29,21 @@ import tensorflow as tf
 # from config.config import get_config
 from config.ctc_config import get_config
 from utils.common import path_join
-from utils.prediction import moving_average, decode, predict, ctc_predict
+from utils.prediction import moving_average, decode, ctc_predict, ctc_decode, \
+    ctc_decode_strict
 from fetch_wave import fetch
 from normalize import main
 import librosa
 
 # load graph
+
 config = get_config()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def process_wave(f):
     y, sr = librosa.load(f, sr=config.samplerate)
+    stft = librosa.stft(y, 400, 160, 400)
 
     mel_spectrogram = np.transpose(
         librosa.feature.melspectrogram(y, sr=sr, n_fft=config.fft_size,
@@ -46,6 +54,32 @@ def process_wave(f):
                                        n_mels=60))
 
     return mel_spectrogram, y
+
+
+def frame(y, n_fft=400, hop_length=160, win_length=400, window='hann'):
+    if win_length is None:
+        win_length = n_fft
+
+        # Set the default hop, if it's not already specified
+    if hop_length is None:
+        hop_length = int(win_length // 4)
+
+    fft_window = librosa.filters.get_window(window, win_length, fftbins=True)
+
+    # Pad the window out to n_fft size
+    fft_window = librosa.util.pad_center(fft_window, n_fft)
+
+    # Reshape so that the window can be broadcast
+    fft_window = fft_window.reshape((-1, 1))
+
+    # Pad the time series so that frames are centered
+
+    y = np.pad(y, int(n_fft // 2), mode='reflect')
+
+    # Window the time series.
+    y_frames = librosa.util.frame(y, frame_length=n_fft, hop_length=hop_length)
+
+    return (y_frames * fft_window).T
 
 
 class Runner():
@@ -62,39 +96,37 @@ class Runner():
         self.graph = tf.Graph()
         with self.graph.as_default():
             tf.import_graph_def(self.graph_def, name="")
+        nodes = [node.name for node in self.graph.get_operations()]
+        for i in nodes:
+            if 'nn' in i:
+                print(i)
         self.sess = tf.Session(graph=self.graph)
 
-    def predict(self, inputX):
-        seqLen = np.asarray([len(inputX)])
-        # with self.sess as sess, self.graph.as_default():
-        prob = self.sess.run(['model/softmax:0'],
-                             feed_dict={'model/inputX:0': inputX,
-                                        'model/seqLength:0': seqLen})
-        np.set_printoptions(precision=4, threshold=np.inf,
-                            suppress=True)
-        # print(prob)
-        with open('logits.txt', 'w') as f:
-            f.write(str(prob))
-        moving_avg = moving_average(prob[0], self.config.smoothing_window,
-                                    padding=True)
-
-        prediction = predict(moving_avg, self.config.trigger_threshold,
-                             self.config.lockout)
-        result = decode(prediction, self.config.word_interval,
-                        self.config.golden)
-        return True if result == 1 else False
-
     def predict_ctc(self, inputX):
-        seqLen = np.asarray([len(inputX)])
         # with self.sess as sess, self.graph.as_default():
-        output = self.sess.run(['model/dense_output:0'],
-                               feed_dict={'model/inputX:0': inputX,
-                                          'model/seqLength:0': seqLen})
+        st = time.time()
+        softmax, nnoutput = self.sess.run(
+            ['model/softmax:0', 'model/nn_outputs:0'],
+            feed_dict={'model/inputX:0': inputX})
+        end = time.time()
+        print('processing time', end - st)
+
+        colors = ['r', 'b', 'g', 'm', 'y', 'k', 'r', 'b']
+        y = nnoutput[0]
+        x = range(len(y))
+        print(y.shape)
+        plt.figure(figsize=(10, 4))  # 创建绘图对象
+        for i in range(1, y.shape[1]):
+            plt.plot(x, y[:, i], colors[i - 1], linewidth=1, label=str(i))
+        plt.legend(loc='upper right')
+        plt.savefig('./fig.png')
+        output = ctc_decode_strict(softmax, config.num_classes)
         np.set_printoptions(precision=4, threshold=np.inf,
                             suppress=True)
         # print(prob)
-        result = ctc_predict(output[0])
-        return True if result == 1 else False
+        # result = True if ctc_predict(output[0]) else False
+        result = True if ctc_predict(output, config.label_seqs) else False
+        return result, str(output)
 
 
 def run(device_id='32EFEA3263D079E1BE3767C87FC0A1C2', current=False):
@@ -105,8 +137,8 @@ def run(device_id='32EFEA3263D079E1BE3767C87FC0A1C2', current=False):
     if not current:
         wave, label = fetch(device_id)
         print('wave', wave)
-    spec, _ = process_wave('temp.wav')
-    result = runner.predict(spec)
+    frames = frame('temp.wav')
+    result = runner.predict_ctc(frames)
 
     print(result, label)
 
@@ -120,18 +152,22 @@ class HotWordHandler(tornado.web.RequestHandler):
         wave, label, wave_id = fetch(device_id)
         print('wave', wave)
         main()
-        spec, _ = process_wave('normalized-temp.wav')
-        result = self.runner.predict_ctc(spec)
+
+        y, _ = librosa.load('normalized-temp.wav', sr=config.samplerate)
+        frames = frame(y)
+
+        result, output = self.runner.predict_ctc(y)
         self.write({
             'result': result,
             'label': label,
             'time': time.strftime('%Y-%m-%d %A %X %Z',
                                   time.localtime(time.time())),
-            'wave_id': wave_id
+            'wave_id': wave_id,
+            'output': output
         })
 
 
-def start_server():
+def start_server(port):
     runner = Runner(config)
     AsyncIOMainLoop().install()
     app = tornado.web.Application([
@@ -142,12 +178,18 @@ def start_server():
         (r'/api/hotword', HotWordHandler, {'runner': runner}),
     ], debug=True
     )
-    app.listen(8080)
+    app.listen(port)
     print('start server')
     loop = asyncio.get_event_loop()
     loop.run_forever()
 
 
 if __name__ == '__main__':
-    start_server()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port',
+                        help='server port, 8080 by dedault',
+                        type=int,
+                        default=8080)
+    flags = parser.parse_args().__dict__
+    start_server(flags['port'])
     # run('32EFEA3263D079E1BE3767C87FC0A1C2', True)

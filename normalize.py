@@ -380,7 +380,7 @@ def main():
             'force': [],
             'prefix': 'normalized',
             'dir': None,
-            'verbose': 1,
+            'verbose': 0,
             'debug': None,
             'input_file': ['temp.wav'],
             'format': 'wav'}
